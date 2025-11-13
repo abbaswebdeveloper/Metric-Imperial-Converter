@@ -10,10 +10,8 @@ class ConvertHandler {
   getNum(input) {
     if (!input) return 1;
     
-    // Find first alphabet character
     const match = input.match(/[a-zA-Z]/);
     if (!match) {
-      // No unit found, check if it's just a number
       if (input.trim() === '') return 1;
       const num = this.evaluateNumber(input);
       return num === 'invalid' ? 'invalid number' : num;
@@ -28,12 +26,10 @@ class ConvertHandler {
   }
   
   evaluateNumber(str) {
-    // Check for multiple fractions
     if ((str.match(/\//g) || []).length > 1) {
       return 'invalid number';
     }
     
-    // Handle fractions
     if (str.includes('/')) {
       const parts = str.split('/');
       if (parts.length !== 2) return 'invalid number';
@@ -48,7 +44,6 @@ class ConvertHandler {
       return num / den;
     }
     
-    // Handle decimal numbers
     const num = parseFloat(str);
     return isNaN(num) ? 'invalid number' : num;
   }
@@ -56,7 +51,6 @@ class ConvertHandler {
   getUnit(input) {
     if (!input) return 'invalid unit';
     
-    // Find first alphabet character
     const match = input.match(/[a-zA-Z]/);
     if (!match) return 'invalid unit';
     
@@ -101,29 +95,31 @@ class ConvertHandler {
   }
 
   convert(initNum, initUnit) {
+    // EXACT conversion rates as per FreeCodeCamp tests
     const rates = {
-      'gal': 3.78541,
-      'L': 1/3.78541,
-      'lbs': 0.453592,
-      'kg': 1/0.453592,
-      'mi': 1.60934,
-      'km': 1/1.60934
+      'gal': 3.78541,    // EXACT: 1 gal = 3.78541 L
+      'L': 1/3.78541,    // EXACT: 1 L = 0.26417 gal
+      'lbs': 0.453592,   // EXACT: 1 lbs = 0.453592 kg  
+      'kg': 1/0.453592,  // EXACT: 1 kg = 2.20462 lbs
+      'mi': 1.60934,     // EXACT: 1 mi = 1.60934 km
+      'km': 1/1.60934    // EXACT: 1 km = 0.62137 mi
     };
     
-    return initNum * rates[initUnit];
+    const result = initNum * rates[initUnit];
+    return parseFloat(result.toFixed(5));
   }
 
   getString(initNum, initUnit, returnNum, returnUnit) {
     const initStr = this.spellOutUnit(initUnit);
     const returnStr = this.spellOutUnit(returnUnit);
     
-    return `${initNum} ${initStr} converts to ${parseFloat(returnNum.toFixed(5))} ${returnStr}`;
+    // EXACT string format required
+    return `${initNum} ${initStr} converts to ${returnNum} ${returnStr}`;
   }
 }
 
 const convertHandler = new ConvertHandler();
 
-// API endpoint - EXACTLY as required
 app.get('/api/convert', (req, res) => {
   const input = req.query.input;
   
@@ -134,7 +130,6 @@ app.get('/api/convert', (req, res) => {
   const initNum = convertHandler.getNum(input);
   const initUnit = convertHandler.getUnit(input);
   
-  // Check for errors
   if (initNum === 'invalid number' && initUnit === 'invalid unit') {
     return res.send('invalid number and unit');
   }
@@ -152,28 +147,18 @@ app.get('/api/convert', (req, res) => {
   res.json({
     initNum: initNum,
     initUnit: initUnit,
-    returnNum: parseFloat(returnNum.toFixed(5)),
+    returnNum: returnNum, // Already rounded to 5 decimals in convert()
     returnUnit: returnUnit,
     string: string
   });
 });
 
-// Home page
 app.get('/', (req, res) => {
   res.send(`
     <html>
       <body>
         <h1>Metric-Imperial Converter</h1>
         <p>Use: /api/convert?input=4gal</p>
-        <p>Test these:</p>
-        <ul>
-          <li>4gal</li>
-          <li>1/2km</li> 
-          <li>5.4lbs</li>
-          <li>kg</li>
-          <li>3/2/3kg (invalid)</li>
-          <li>32g (invalid)</li>
-        </ul>
       </body>
     </html>
   `);
