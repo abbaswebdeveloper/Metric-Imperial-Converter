@@ -8,23 +8,30 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ConvertHandler Class (Complete functionality)
+// ConvertHandler Class (FIXED FOR ALL TESTS)
 class ConvertHandler {
   getNum(input) {
-    // Find the index where unit starts
+    if (!input) return 1;
+    
+    // Find the index where unit starts (first alphabet)
     let unitIndex = input.search(/[a-zA-Z]/);
     
     if (unitIndex === -1) {
-      // No unit found, check if it's a valid number
+      // No letters found, check if it's a valid number
       if (input === '') return 1;
       unitIndex = input.length;
     }
     
-    const numberStr = input.slice(0, unitIndex);
+    const numberStr = input.slice(0, unitIndex).trim();
     
+    // If no number provided, default to 1
     if (numberStr === '') return 1;
     
-    // Check for fractions
+    // Check for double fractions (3/2/3)
+    const slashCount = (numberStr.match(/\//g) || []).length;
+    if (slashCount > 1) return 'invalid number';
+    
+    // Handle fractions
     if (numberStr.includes('/')) {
       const parts = numberStr.split('/');
       if (parts.length !== 2) return 'invalid number';
@@ -39,24 +46,29 @@ class ConvertHandler {
       return numerator / denominator;
     }
     
+    // Handle decimal numbers
     const number = parseFloat(numberStr);
     return isNaN(number) ? 'invalid number' : number;
   }
 
   getUnit(input) {
-    const units = ['gal', 'l', 'mi', 'km', 'lbs', 'kg'];
+    if (!input) return 'invalid unit';
     
-    // Find the unit part
+    const validUnits = ['gal', 'l', 'mi', 'km', 'lbs', 'kg'];
+    
+    // Find the unit part (everything after numbers)
     let unitIndex = input.search(/[a-zA-Z]/);
     if (unitIndex === -1) return 'invalid unit';
     
-    const unitStr = input.slice(unitIndex).toLowerCase();
+    let unitStr = input.slice(unitIndex).toLowerCase();
     
-    // Special case for liters
-    if (unitStr === 'l' || unitStr === 'liter' || unitStr === 'liters') return 'L';
+    // Handle liter unit (should be uppercase L in response)
+    if (unitStr === 'l' || unitStr === 'liter' || unitStr === 'liters') {
+      return 'L';
+    }
     
     // Check if unit is valid
-    const validUnit = units.find(unit => unit === unitStr);
+    const validUnit = validUnits.find(unit => unit === unitStr);
     return validUnit ? validUnit : 'invalid unit';
   }
 
@@ -96,7 +108,8 @@ class ConvertHandler {
       'kg': 1/0.453592   // kilograms to pounds
     };
     
-    return initNum * conversionRates[initUnit];
+    const result = initNum * conversionRates[initUnit];
+    return parseFloat(result.toFixed(5));
   }
 
   getString(initNum, initUnit, returnNum, returnUnit) {
@@ -110,7 +123,7 @@ class ConvertHandler {
 // Create instance
 const convertHandler = new ConvertHandler();
 
-// API Routes
+// API Routes - FIXED ENDPOINT
 app.get('/api/convert', (req, res) => {
   try {
     const input = req.query.input;
@@ -123,7 +136,7 @@ app.get('/api/convert', (req, res) => {
     const initNum = convertHandler.getNum(input);
     const initUnit = convertHandler.getUnit(input);
     
-    // Validate
+    // Validation with exact error messages
     if (initNum === 'invalid number' && initUnit === 'invalid unit') {
       return res.json({ error: 'invalid number and unit' });
     }
@@ -139,12 +152,13 @@ app.get('/api/convert', (req, res) => {
     const returnUnit = convertHandler.getReturnUnit(initUnit);
     const string = convertHandler.getString(initNum, initUnit, returnNum, returnUnit);
 
+    // Return with correct format
     res.json({
-      initNum,
-      initUnit,
-      returnNum: parseFloat(returnNum.toFixed(5)),
-      returnUnit,
-      string
+      initNum: initNum,
+      initUnit: initUnit,
+      returnNum: returnNum,
+      returnUnit: returnUnit,
+      string: string
     });
 
   } catch (error) {
@@ -165,100 +179,34 @@ app.get('/', (req, res) => {
                 max-width: 800px; 
                 margin: 0 auto; 
                 padding: 20px; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
+                background: #f5f5f5;
             }
             .container {
                 background: white;
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            }
-            h1 { 
-                color: #333; 
-                text-align: center;
-                margin-bottom: 10px;
-            }
-            .subtitle {
-                color: #666;
-                text-align: center;
-                margin-bottom: 30px;
-            }
-            .example { 
-                background: #f9f9f9; 
-                padding: 20px; 
-                margin: 15px 0; 
+                padding: 30px;
                 border-radius: 10px;
-                border-left: 4px solid #667eea;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }
-            code {
-                background: #f1f1f1;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-family: monospace;
-            }
-            .test-area {
-                background: #e9f7ef;
-                padding: 20px;
-                border-radius: 10px;
-                margin: 20px 0;
-            }
-            input, button {
-                padding: 12px;
-                margin: 5px;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                font-size: 16px;
-            }
-            button {
-                background: #667eea;
-                color: white;
-                border: none;
-                cursor: pointer;
-            }
-            button:hover {
-                background: #5a6fd8;
-            }
-            #result {
-                margin-top: 15px;
-                padding: 15px;
-                background: #f8f9fa;
-                border-radius: 5px;
-                display: none;
-            }
+            h1 { color: #333; text-align: center; }
+            .test-area { background: #e9f7ef; padding: 20px; margin: 20px 0; border-radius: 10px; }
+            input, button { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 5px; }
+            button { background: #007bff; color: white; border: none; cursor: pointer; }
+            #result { margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>📐 Metric-Imperial Converter</h1>
-            <p class="subtitle">Convert between gallons/liters, miles/kilometers, and pounds/kilograms</p>
+            <h1>Metric-Imperial Converter</h1>
             
             <div class="test-area">
-                <h3>🔧 Test the API</h3>
-                <input type="text" id="inputValue" placeholder="Enter value like: 4gal, 1/2km, 5.4lbs" style="width: 300px;">
+                <h3>Test the API</h3>
+                <input type="text" id="inputValue" placeholder="Enter: 4gal, 1/2km, kg" style="width: 250px;">
                 <button onclick="testConvert()">Convert</button>
                 <div id="result"></div>
             </div>
             
-            <div class="example">
-                <strong>📖 API Usage:</strong><br>
-                Use endpoint: <code>GET /api/convert?input=4gal</code>
-            </div>
-            
-            <div class="example">
-                <strong>🎯 Examples:</strong><br>
-                <code>/api/convert?input=4gal</code><br>
-                <code>/api/convert?input=1/2km</code><br>
-                <code>/api/convert?input=5.4/3lbs</code><br>
-                <code>/api/convert?input=kg</code>
-            </div>
-            
-            <div class="example">
-                <strong>✅ Supported units:</strong><br>
-                • gal (gallons) ↔ L (liters)<br>
-                • mi (miles) ↔ km (kilometers)<br>
-                • lbs (pounds) ↔ kg (kilograms)
-            </div>
+            <p><strong>Endpoint:</strong> GET /api/convert?input=4gal</p>
+            <p><strong>Supported units:</strong> gal/L, mi/km, lbs/kg</p>
         </div>
 
         <script>
@@ -279,24 +227,15 @@ app.get('/', (req, res) => {
                         resultDiv.innerHTML = '<strong style="color: red;">Error:</strong> ' + data.error;
                     } else {
                         resultDiv.innerHTML = 
-                            '<strong>✅ Conversion Result:</strong><br>' +
-                            '<strong>Input:</strong> ' + data.initNum + ' ' + data.initUnit + '<br>' +
-                            '<strong>Output:</strong> ' + data.returnNum + ' ' + data.returnUnit + '<br>' +
-                            '<strong>Full:</strong> ' + data.string;
+                            '<strong>Result:</strong><br>' +
+                            'Input: ' + data.initNum + ' ' + data.initUnit + '<br>' +
+                            'Output: ' + data.returnNum + ' ' + data.returnUnit + '<br>' +
+                            'String: ' + data.string;
                     }
-                    resultDiv.style.display = 'block';
                 } catch (error) {
-                    resultDiv.innerHTML = '<strong style="color: red;">Network Error:</strong> ' + error.message;
-                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = '<strong style="color: red;">Error:</strong> ' + error.message;
                 }
             }
-            
-            // Enter key support
-            document.getElementById('inputValue').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    testConvert();
-                }
-            });
         </script>
     </body>
     </html>
